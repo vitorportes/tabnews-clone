@@ -1,22 +1,32 @@
 import database from "infra/database.js";
-import { userAgent } from "next/server";
 
 async function status(request, response) {
   const updatedAt = new Date();
-  const result = await database.query(`
-  SELECT 
-      version() AS postgres_version,
-      (SELECT setting FROM pg_settings WHERE name = 'max_connections') AS max_connections,
-      (SELECT COUNT(*) FROM pg_stat_activity) AS used_connections
-  `);
-  const { postgres_version, max_connections, used_connections } =
-    result.rows[0];
+
+  const postgresVersionResult = await database.query("SHOW server_version");
+  const postgresVersionValue = postgresVersionResult.rows[0].server_version;
+
+  const maxConnectionsResult = await database.query("SHOW max_connections");
+  const maxConnectionsValue = parseInt(
+    maxConnectionsResult.rows[0].max_connections,
+  );
+
+  const databaseName = process.env.POSTGRES_DB;
+  const usedConnectionsResult = await database.query({
+    text: "SELECT count(*) FROM pg_stat_activity WHERE datname = $1",
+    values: [databaseName],
+  });
+  const usedConnectionsValue = parseInt(usedConnectionsResult.rows[0].count);
 
   response.status(200).json({
     updated_at: updatedAt,
-    postgres_version: postgres_version,
-    max_connections: max_connections,
-    used_connections: used_connections,
+    dependencies: {
+      database: {
+        postgres_version: postgresVersionValue,
+        max_connections: maxConnectionsValue,
+        used_connections: usedConnectionsValue,
+      },
+    },
   });
 }
 
