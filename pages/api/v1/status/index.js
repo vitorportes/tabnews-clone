@@ -13,10 +13,10 @@ async function status(request, response) {
 
   const databaseName = process.env.POSTGRES_DB;
   const usedConnectionsResult = await database.query({
-    text: "SELECT count(*) FROM pg_stat_activity WHERE datname = $1",
+    text: "SELECT count(*)::INT FROM pg_stat_activity WHERE datname = $1",
     values: [databaseName],
   });
-  const usedConnectionsValue = parseInt(usedConnectionsResult.rows[0].count);
+  const usedConnectionsValue = usedConnectionsResult.rows[0].count;
 
   response.status(200).json({
     updated_at: updatedAt,
